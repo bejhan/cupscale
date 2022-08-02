@@ -99,14 +99,12 @@ namespace Cupscale.UI
                 BatchUpscaleUI.LoadDir(Paths.imgInPath, true);
                 Print("Upscaling frames...");
                 await BatchUpscaleUI.Run(false, true, false, Paths.framesOutPath);
-                RenameOutFiles();
-                Print($"Done upscaling all frames.");
+                Print("Renaming frames...");
+                await Task.Run(() => RenameOutFiles());
                 BatchUpscaleUI.Reset();
                 Print("Creating video from frames...");
                 await CreateVideo();
-                Print("Done creating video.");
-                CopyBack(Path.Combine(Paths.GetDataPath(), "frames-out.mp4"));
-                Print("Adding audio from source to output video...");
+                await Task.Run(() => CopyBack(Path.Combine(Paths.GetDataPath(), "frames-out.mp4")));
                 IoUtils.ClearDir(Paths.imgInPath);
                 IoUtils.ClearDir(Paths.framesOutPath);
                 Program.mainForm.SetBusy(false);
@@ -172,7 +170,10 @@ namespace Cupscale.UI
                 await Task.Delay(10);
                 await FFmpegCommands.FramesToMp4(Paths.framesOutPath, Config.GetBool("h265"), Config.GetInt("crf"), fps, "", false);
                 if (Config.GetBool("vidEnableAudio"))
+                {
+                    Print("Adding audio from source to output video...");
                     await FFmpegCommands.MergeAudio(Paths.framesOutPath + ".mp4", currentInFile);
+                }
                 f.Close();
             }
 
@@ -227,6 +228,8 @@ namespace Cupscale.UI
         static void RenameOutFiles()
         {
             string[] frames = IoUtils.GetCompatibleFiles(Paths.framesOutPath, false);
+            var renamedFrames = 0;
+
             foreach (string frame in frames)
             {
                 if (frame.Contains("-"))
@@ -237,7 +240,12 @@ namespace Cupscale.UI
                     Logger.Log("NewPath: " + newPath);
                     File.Move(frame, newPath);
                 }
+
+                float percentage = ((float)++renamedFrames / frames.Length) * 100f;
+                Program.mainForm.SetProgress((int)Math.Round(percentage), "Renamed " + renamedFrames + "/" + frames.Length + " frames");
             }
+
+            Program.mainForm.SetProgress(0);
         }
 
         static void Print(string s, bool replaceLastLine = false)
