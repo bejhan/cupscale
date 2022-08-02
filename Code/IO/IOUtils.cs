@@ -113,17 +113,30 @@ namespace Cupscale
             Directory.CreateDirectory(targetDir);
             DirectoryInfo source = new DirectoryInfo(sourceDir);
             DirectoryInfo target = new DirectoryInfo(targetDir);
+
+            var totalCount = source.GetFiles("*", SearchOption.AllDirectories).Length;
+            var copiedCount = 0;
+
+            void onFileCopy()
+            {
+                copiedCount++;
+                float prog = -1f;
+                if (totalCount > 0)
+                    prog = ((float)copiedCount / totalCount) * 100f;
+                if (copiedCount % 20 == 0) Program.mainForm.SetProgress(prog, $"Copied {copiedCount} images...");
+            }
+
             Stopwatch sw = new Stopwatch();
             sw.Restart();
-            await CopyWork(source, target, wildcard, move, onlyCompatibles, removeFromName, sw);
+            await CopyWork(source, target, wildcard, move, onlyCompatibles, removeFromName, sw, onFileCopy);
         }
 
-        private static async Task CopyWork(DirectoryInfo source, DirectoryInfo target, string wildcard, bool move, bool onlyCompatibles, string removeFromName, Stopwatch sw)
+        private static async Task CopyWork(DirectoryInfo source, DirectoryInfo target, string wildcard, bool move, bool onlyCompatibles, string removeFromName, Stopwatch sw, Action onFileCopy)
         {
             DirectoryInfo[] directories = source.GetDirectories();
 
             foreach (DirectoryInfo directoryInfo in directories)
-                await CopyWork(directoryInfo, target.CreateSubdirectory(directoryInfo.Name), wildcard, move, onlyCompatibles, removeFromName, sw);
+                await CopyWork(directoryInfo, target.CreateSubdirectory(directoryInfo.Name), wildcard, move, onlyCompatibles, removeFromName, sw, onFileCopy);
 
             FileInfo[] files = source.GetFiles(wildcard);
 
@@ -135,15 +148,17 @@ namespace Cupscale
                     sw.Restart();
                 }
 
-                if (onlyCompatibles && !compatibleExtensions.Contains(fileInfo.Extension.ToLower()))
-                    continue;
+                if (!onlyCompatibles || compatibleExtensions.Contains(fileInfo.Extension.ToLower()))
+                {
+                    string targetPath = Path.Combine(target.FullName, fileInfo.Name);
 
-                string targetPath = Path.Combine(target.FullName, fileInfo.Name);
+                    if (move)
+                        fileInfo.MoveTo(targetPath);
+                    else
+                        fileInfo.CopyTo(targetPath, overwrite: true);
+                }
 
-                if (move)
-                    fileInfo.MoveTo(targetPath);
-                else
-                    fileInfo.CopyTo(targetPath, overwrite: true);
+                onFileCopy();
             }
         }
 
