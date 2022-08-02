@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -124,22 +125,22 @@ namespace Cupscale.UI
         static void FillFileList (string[] files, bool relativePath)
         {
             fileList.Clear();
-            string text = "";
+            var text = new StringBuilder();
 
             foreach (string file in files)
             {
                 if (relativePath)
                 {
                     string relPath = file.Replace(@"\", "/").Replace(currentParentDir.Replace(@"\", "/"), "");
-                    text = text + "Root" + relPath + Environment.NewLine;
+                    text.AppendLine("Root" + relPath);
                 }
                 else
                 {
-                    text = text + file + Environment.NewLine;
+                    text.AppendLine(file);
                 }
             }
 
-            fileList.AppendText(text);
+            fileList.AppendText(text.ToString());
         }
 
         public static async Task Run (bool preprocess, bool postProcess = true, bool cacheSplitDepth = false, string overrideOutDir = "")
