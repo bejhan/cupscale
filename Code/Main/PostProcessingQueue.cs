@@ -130,7 +130,6 @@ namespace Cupscale.Cupscale
                                 Directory.CreateDirectory(combinedPath.GetParentDir());
                                 File.Copy(outFilename, combinedPath, true);
                             }
-
                             if (copyMode == CopyMode.CopyToRoot)
                             {
                                 File.Copy(outFilename, Path.Combine(currentOutPath, Path.GetFileName(outFilename)), true);
@@ -158,9 +157,14 @@ namespace Cupscale.Cupscale
                 try
                 {
                     string newPath = file.Substring(0, file.Length - 8) + ".tmp";
-                    string movePath = Path.Combine(Paths.imgOutPath, Path.GetFileName(newPath));
-                    Logger.Log("[Queue] Renaming & moving " + file + " => " + movePath);
-                    File.Move(file, movePath);
+
+                    if (copyMode == CopyMode.CopyToRoot)
+                    {
+                        newPath = Path.Combine(Paths.imgOutPath, Path.GetFileName(newPath));
+                    }
+                    
+                    Logger.Log("[Queue] Renaming & moving " + file + " => " + newPath);
+                    File.Move(file, newPath);
                 }
                 catch { }
             }
